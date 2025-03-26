@@ -293,7 +293,7 @@ const HeaderWithDropdown = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm px-4">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-16 items-center">
         {/* Logo */}
         <Link
           to="/"
@@ -425,7 +425,7 @@ const HeaderWithDropdown = () => {
 
               {isUserDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-popover border animate-in fade-in-50 zoom-in-95 slide-in-from-top-5 duration-200"
+                  className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-popover border animate-in fade-in-50 slide-in-from-top-5 duration-200"
                   role="menu"
                   aria-orientation="vertical"
                 >
@@ -516,8 +516,10 @@ const HeaderWithDropdown = () => {
         ref={mobileMenuRef}
         id="mobile-menu"
         className={cn(
-          "fixed inset-0 top-16 z-40 transform transition-transform duration-300 ease-in-out md:hidden bg-background/95 backdrop-blur-sm",
-          isMenuOpen ? "translate-x-0" : "translate-x-full"
+          " inset-0 top-16 z-40 transform transition-all duration-300 ease-in-out md:hidden bg-background/95 backdrop-blur-sm",
+          isMenuOpen
+            ? "opacity-100 scale-100 translate-x-0"
+            : "opacity-0 scale-95 hidden"
         )}
         aria-hidden={!isMenuOpen}
       >
@@ -655,10 +657,10 @@ const HeaderWithDropdown = () => {
 
       {/* Login Modal */}
       {isLoginModalOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-start justify-center p-4">
           <div
             ref={loginModalRef}
-            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 zoom-in-95 duration-300"
+            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 duration-300"
           >
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-semibold">Login</h2>
@@ -774,10 +776,10 @@ const HeaderWithDropdown = () => {
 
       {/* Sign Up Modal */}
       {isSignUpModalOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-start justify-center p-4">
           <div
             ref={signUpModalRef}
-            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 zoom-in-95 duration-300"
+            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 duration-300"
           >
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-semibold">Sign Up</h2>
