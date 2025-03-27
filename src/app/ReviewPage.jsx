@@ -211,7 +211,7 @@ export default function ReviewPage() {
                     key={index}
                     className={`flex items-center space-x-2 rounded-lg border p-4 transition-colors ${
                       showAnswer && option === currentQuestionData.correctAnswer
-                        ? "border-green-500 bg-green-50"
+                        ? "border-green-500 bg-green-50 dark:text-black"
                         : showAnswer &&
                           selectedAnswer === option &&
                           option !== currentQuestionData.correctAnswer

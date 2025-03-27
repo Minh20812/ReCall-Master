@@ -134,6 +134,7 @@ const HeaderWithDropdown = () => {
 
   // Close mobile menu when route changes
   useEffect(() => {
+    ``;
     setIsMenuOpen(false);
   }, [location]);
 
@@ -425,7 +426,7 @@ const HeaderWithDropdown = () => {
 
               {isUserDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-popover border animate-in fade-in-50 slide-in-from-top-5 duration-200"
+                  className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-popover border animate-in fade-in-50 duration-200"
                   role="menu"
                   aria-orientation="vertical"
                 >
