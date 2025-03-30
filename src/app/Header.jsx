@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import {
   BarChart2,
@@ -13,15 +14,13 @@ import {
   Sun,
   User,
   X,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
   UserPlus,
   LogIn,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useOnClickOutside } from "../hooks/use-click-outside";
+import LoginModal from "@/components/login-modal";
+import SignUpModal from "@/components/signup-modal";
 
 const routes = [
   {
@@ -67,25 +66,12 @@ const HeaderWithDropdown = () => {
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
   const location = useLocation();
 
-  // Authentication state
-  const [authState, setAuthState] = useState({
-    isAuthenticated: false,
-    user: null,
-  });
-
   // Modal states
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
 
   // Form states
   const [showPassword, setShowPassword] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signUpForm, setSignUpForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
   const [rememberMe, setRememberMe] = useState(false);
 
   const userDropdownRef = useRef(null);
@@ -94,6 +80,17 @@ const HeaderWithDropdown = () => {
   const menuButtonRef = useRef(null);
   const loginModalRef = useRef(null);
   const signUpModalRef = useRef(null);
+
+  // Lấy thông tin user từ Redux store
+  const { userInfo } = useSelector((state) => state.auth);
+
+  // Kiểm tra trạng thái đăng nhập từ Redux
+  const isAuthenticated = Boolean(
+    userInfo?._id ||
+      userInfo?.userInfo?._id ||
+      userInfo?.email ||
+      userInfo?.userInfo?.email
+  );
 
   // Close dropdowns when clicking outside
   useOnClickOutside(userDropdownRef, () => setIsUserDropdownOpen(false), [
@@ -134,7 +131,6 @@ const HeaderWithDropdown = () => {
 
   // Close mobile menu when route changes
   useEffect(() => {
-    ``;
     setIsMenuOpen(false);
   }, [location]);
 
@@ -147,17 +143,6 @@ const HeaderWithDropdown = () => {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
-    }
-
-    // Check for saved auth state
-    const savedAuth = localStorage.getItem("authState");
-    if (savedAuth) {
-      try {
-        const parsedAuth = JSON.parse(savedAuth);
-        setAuthState(parsedAuth);
-      } catch (e) {
-        console.error("Failed to parse saved auth state");
-      }
     }
   }, []);
 
@@ -199,98 +184,29 @@ const HeaderWithDropdown = () => {
     }
   }, [isMenuOpen]);
 
-  // Handle login form submission
-  const handleLogin = useCallback(
-    (e) => {
-      e.preventDefault();
-
-      // In a real app, you would validate and send to an API
-      // This is just a demo implementation
-      setAuthState({
-        isAuthenticated: true,
-        user: {
-          name: "John Doe",
-          email: loginForm.email,
-        },
-      });
-
-      // Save to localStorage if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem(
-          "authState",
-          JSON.stringify({
-            isAuthenticated: true,
-            user: {
-              name: "John Doe",
-              email: loginForm.email,
-            },
-          })
-        );
-      }
-
-      // Close the modal
-      setIsLoginModalOpen(false);
-
-      // Reset form
-      setLoginForm({ email: "", password: "" });
-    },
-    [loginForm, rememberMe]
-  );
-
-  // Handle sign up form submission
-  const handleSignUp = useCallback(
-    (e) => {
-      e.preventDefault();
-
-      // In a real app, you would validate and send to an API
-      // This is just a demo implementation
-      if (signUpForm.password !== signUpForm.confirmPassword) {
-        alert("Passwords don't match");
-        return;
-      }
-
-      setAuthState({
-        isAuthenticated: true,
-        user: {
-          name: signUpForm.name,
-          email: signUpForm.email,
-        },
-      });
-
-      // Save to localStorage
-      localStorage.setItem(
-        "authState",
-        JSON.stringify({
-          isAuthenticated: true,
-          user: {
-            name: signUpForm.name,
-            email: signUpForm.email,
-          },
-        })
-      );
-
-      // Close the modal
-      setIsSignUpModalOpen(false);
-
-      // Reset form
-      setSignUpForm({ name: "", email: "", password: "", confirmPassword: "" });
-    },
-    [signUpForm]
-  );
-
   // Handle logout
   const handleLogout = useCallback(() => {
-    setAuthState({
-      isAuthenticated: false,
-      user: null,
-    });
-
-    // Remove from localStorage
-    localStorage.removeItem("authState");
+    // Xử lý logout (giữ lại phần này cho UI demo, thực tế sẽ dispatch logout action)
 
     // Close dropdown
     setIsUserDropdownOpen(false);
   }, []);
+
+  // Lấy tên hiển thị của user
+  const getUserDisplayName = () => {
+    if (userInfo?.username) return userInfo.username;
+    if (userInfo?.userInfo?.username) return userInfo.userInfo.username;
+    if (userInfo?.name) return userInfo.name;
+    if (userInfo?.userInfo?.name) return userInfo.userInfo.name;
+    return "User";
+  };
+
+  // Lấy email của user
+  const getUserEmail = () => {
+    if (userInfo?.email) return userInfo.email;
+    if (userInfo?.userInfo?.email) return userInfo.userInfo.email;
+    return "";
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm px-4">
@@ -409,7 +325,7 @@ const HeaderWithDropdown = () => {
           </button>
 
           {/* Authentication Buttons or User Profile */}
-          {authState.isAuthenticated ? (
+          {isAuthenticated ? (
             <div className="relative" ref={userDropdownRef}>
               <button
                 className="inline-flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9"
@@ -433,10 +349,10 @@ const HeaderWithDropdown = () => {
                   <div className="py-1 rounded-md bg-popover text-popover-foreground">
                     <div className="px-4 py-3 border-b">
                       <p className="text-sm font-medium">
-                        {authState.user?.name}
+                        {getUserDisplayName()}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {authState.user?.email}
+                        {getUserEmail()}
                       </p>
                     </div>
                     <Link
@@ -525,7 +441,7 @@ const HeaderWithDropdown = () => {
         aria-hidden={!isMenuOpen}
       >
         <nav className="container grid gap-2 p-4 overflow-y-auto max-h-[calc(100vh-4rem)]">
-          {!authState.isAuthenticated && (
+          {!isAuthenticated && (
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button
                 onClick={() => {
@@ -623,16 +539,16 @@ const HeaderWithDropdown = () => {
               </div>
             </div>
 
-            {authState.isAuthenticated && (
+            {isAuthenticated && (
               <div className="px-4 py-2 mt-4">
                 <div className="flex items-center gap-3 mb-1">
                   <User className="h-5 w-5" />
                   <div>
                     <p className="text-sm font-medium">
-                      {authState.user?.name}
+                      {getUserDisplayName()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {authState.user?.email}
+                      {getUserEmail()}
                     </p>
                   </div>
                 </div>
@@ -656,287 +572,30 @@ const HeaderWithDropdown = () => {
         </nav>
       </div>
 
-      {/* Login Modal */}
-      {isLoginModalOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-start justify-center p-4">
-          <div
-            ref={loginModalRef}
-            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 duration-300"
-          >
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold">Login</h2>
-              <button
-                onClick={() => setIsLoginModalOpen(false)}
-                className="rounded-full h-8 w-8 inline-flex items-center justify-center hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </button>
-            </div>
-            <form onSubmit={handleLogin} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={loginForm.email}
-                    onChange={(e) =>
-                      setLoginForm({ ...loginForm, email: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={loginForm.password}
-                    onChange={(e) =>
-                      setLoginForm({ ...loginForm, password: e.target.value })
-                    }
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                    <span className="sr-only">
-                      {showPassword ? "Hide password" : "Show password"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <label
-                    htmlFor="remember"
-                    className="text-sm text-muted-foreground"
-                  >
-                    Remember me
-                  </label>
-                </div>
-                <a
-                  href="#"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Forgot password?
-                </a>
-              </div>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
-              >
-                Login
-              </button>
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">
-                  Don't have an account?{" "}
-                </span>
-                <button
-                  type="button"
-                  className="font-medium text-primary hover:underline"
-                  onClick={() => {
-                    setIsLoginModalOpen(false);
-                    setIsSignUpModalOpen(true);
-                  }}
-                >
-                  Sign up
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Conditionally render modals only when NOT authenticated */}
+      {!isAuthenticated && (
+        <>
+          {/* Login Modal */}
+          {isLoginModalOpen && (
+            <LoginModal
+              loginModalRef={loginModalRef}
+              setIsLoginModalOpen={setIsLoginModalOpen}
+              setIsSignUpModalOpen={setIsSignUpModalOpen}
+            />
+          )}
 
-      {/* Sign Up Modal */}
-      {isSignUpModalOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-start justify-center p-4">
-          <div
-            ref={signUpModalRef}
-            className="bg-background rounded-lg shadow-lg w-full max-w-md border animate-in fade-in-50 duration-300"
-          >
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold">Sign Up</h2>
-              <button
-                onClick={() => setIsSignUpModalOpen(false)}
-                className="rounded-full h-8 w-8 inline-flex items-center justify-center hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </button>
-            </div>
-            <form onSubmit={handleSignUp} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={signUpForm.name}
-                    onChange={(e) =>
-                      setSignUpForm({ ...signUpForm, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="signup-email" className="text-sm font-medium">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={signUpForm.email}
-                    onChange={(e) =>
-                      setSignUpForm({ ...signUpForm, email: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="signup-password"
-                  className="text-sm font-medium"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={signUpForm.password}
-                    onChange={(e) =>
-                      setSignUpForm({ ...signUpForm, password: e.target.value })
-                    }
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                    <span className="sr-only">
-                      {showPassword ? "Hide password" : "Show password"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="confirm-password"
-                  className="text-sm font-medium"
-                >
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="confirm-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={signUpForm.confirmPassword}
-                    onChange={(e) =>
-                      setSignUpForm({
-                        ...signUpForm,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  required
-                />
-                <label
-                  htmlFor="terms"
-                  className="text-sm text-muted-foreground"
-                >
-                  I agree to the{" "}
-                  <a href="#" className="text-primary hover:underline">
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a href="#" className="text-primary hover:underline">
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
-              >
-                Create Account
-              </button>
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">
-                  Already have an account?{" "}
-                </span>
-                <button
-                  type="button"
-                  className="font-medium text-primary hover:underline"
-                  onClick={() => {
-                    setIsSignUpModalOpen(false);
-                    setIsLoginModalOpen(true);
-                  }}
-                >
-                  Login
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          {/* Sign Up Modal */}
+          {isSignUpModalOpen && (
+            <SignUpModal
+              isOpen={isSignUpModalOpen}
+              onClose={() => setIsSignUpModalOpen(false)}
+              onSwitchToLogin={() => {
+                setIsSignUpModalOpen(false);
+                setIsLoginModalOpen(true);
+              }}
+            />
+          )}
+        </>
       )}
     </header>
   );

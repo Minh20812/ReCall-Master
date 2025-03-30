@@ -1,11 +1,25 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  userInfo: localStorage.getItem("userInfo")
-    ? JSON.parse(localStorage.getItem("userInfo"))
-    : null,
-  token: localStorage.getItem("token") || null,
+  userInfo: null,
+  token: null,
 };
+
+// Safely parse JSON from localStorage
+const getUserInfoFromStorage = () => {
+  try {
+    const userInfoString = localStorage.getItem("userInfo");
+    return userInfoString ? JSON.parse(userInfoString) : null;
+  } catch (error) {
+    console.error("Error parsing userInfo from localStorage:", error);
+    localStorage.removeItem("userInfo"); // Clean up invalid data
+    return null;
+  }
+};
+
+// Initialize state with values from localStorage
+initialState.userInfo = getUserInfoFromStorage();
+initialState.token = localStorage.getItem("token") || null;
 
 const authSlice = createSlice({
   name: "auth",
@@ -17,14 +31,19 @@ const authSlice = createSlice({
 
       // Store token
       state.token = token;
-      localStorage.setItem("token", token);
+      if (token) {
+        localStorage.setItem("token", token);
+      }
 
       // Store user info, handling different possible structures
       const normalizedUserInfo = userInfo?.userInfo
         ? userInfo.userInfo
         : userInfo;
       state.userInfo = normalizedUserInfo;
-      localStorage.setItem("userInfo", JSON.stringify(normalizedUserInfo));
+
+      if (normalizedUserInfo) {
+        localStorage.setItem("userInfo", JSON.stringify(normalizedUserInfo));
+      }
 
       console.log("Credentials set in Redux:", {
         token,
