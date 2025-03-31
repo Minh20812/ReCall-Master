@@ -26,10 +26,16 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setCredentials: (state, action) => {
-      // Make sure to handle various data structures that might come from different auth methods
-      const { userInfo, token } = action.payload;
+      // Add validation to ensure payload exists
+      if (!action.payload) {
+        console.error("No payload provided to setCredentials");
+        return;
+      }
 
-      // Store token
+      // Destructure with default values to avoid undefined
+      const { userInfo = null, token = null } = action.payload;
+
+      // Store token if it exists
       state.token = token;
       if (token) {
         localStorage.setItem("token", token);

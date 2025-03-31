@@ -64,14 +64,14 @@ export function QuickAddQuestion({ onQuestionsSave }) {
         const options = [row["A"], row["B"], row["C"], row["D"]].filter(
           Boolean
         );
-        const answerIndex = ["A", "B", "C", "D"].indexOf(row["Đáp án đúng"]);
+        const answerIndex = ["A", "B", "C", "D"].indexOf(row["Answer"]);
         return {
-          question: row["Câu hỏi"] || "",
+          question: row["Question"] || "",
           type: "multiple-choice",
           options,
           answer: answerIndex !== -1 ? options[answerIndex] : "",
-          category: row["Chủ đề"] || "other",
-          difficulty: row["Độ khó"] || "medium",
+          category: row["Category"] || "other",
+          difficulty: row["Difficulty"] || "medium",
         };
       });
 

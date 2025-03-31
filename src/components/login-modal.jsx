@@ -39,12 +39,23 @@ const LoginModal = ({
     e.preventDefault();
     try {
       const res = await login({ email, password });
-      console.log(res);
-      dispatch(setCredentials({ ...res }));
-      navigate(redirect);
-      setIsLoginModalOpen(false);
+      console.log("Login response:", res);
+
+      // Truy cập đúng vào dữ liệu từ RTK Query
+      if (res.data) {
+        dispatch(
+          setCredentials({
+            userInfo: res.data.userInfo || res.data,
+            token: res.data.token,
+          })
+        );
+        navigate(redirect);
+        setIsLoginModalOpen(false);
+      } else {
+        console.error("Login response không chứa dữ liệu:", res);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Lỗi đăng nhập:", error);
     }
   };
 

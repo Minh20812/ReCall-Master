@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,8 +25,9 @@ export default function QuestionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Mock questions data
-  const questions = [
+  // State để lưu trữ danh sách câu hỏi
+  const [questions, setQuestions] = useState([
+    // Dữ liệu mẫu ban đầu có thể giữ lại để có sẵn một số câu hỏi
     {
       id: 1,
       question: "What is the function of mitochondria in a cell?",
@@ -36,53 +37,37 @@ export default function QuestionsPage() {
       nextReview: "2023-05-17",
       reviewType: "2-day",
     },
-    {
-      id: 2,
-      question: "Explain the concept of supply and demand in economics.",
-      type: "essay",
-      category: "Economics",
-      created: "2023-05-10",
-      nextReview: "2023-05-17",
-      reviewType: "7-day",
-    },
-    {
-      id: 3,
-      question:
-        "Which of the following is NOT a primary color in the RGB color model?",
-      type: "multiple-choice",
-      category: "Computer Science",
-      created: "2023-04-15",
-      nextReview: "2023-05-15",
-      reviewType: "30-day",
-    },
-    {
-      id: 4,
-      question: "Describe the causes of World War I.",
-      type: "essay",
-      category: "History",
-      created: "2023-05-12",
-      nextReview: "2023-05-14",
-      reviewType: "2-day",
-    },
-    {
-      id: 5,
-      question: "What is the quadratic formula?",
-      type: "multiple-choice",
-      category: "Mathematics",
-      created: "2023-05-08",
-      nextReview: "2023-05-15",
-      reviewType: "7-day",
-    },
-    {
-      id: 6,
-      question: "Explain the process of photosynthesis.",
-      type: "essay",
-      category: "Biology",
-      created: "2023-04-20",
-      nextReview: "2023-05-20",
-      reviewType: "30-day",
-    },
-  ];
+    // ... các câu hỏi mẫu khác
+  ]);
+
+  // Hàm xử lý khi lưu câu hỏi mới từ QuickAddQuestion
+  const handleQuestionsSave = (newQuestions) => {
+    // Thêm các trường cần thiết cho mỗi câu hỏi mới
+    const formattedQuestions = newQuestions.map((q, index) => {
+      const today = new Date();
+      const nextReview = new Date();
+      nextReview.setDate(today.getDate() + 2); // Mặc định review sau 2 ngày
+
+      return {
+        id: questions.length + index + 1, // Tạo ID tự động
+        question: q.question,
+        type: q.type || "multiple-choice",
+        category: q.category || "Other",
+        created: today.toISOString().split("T")[0],
+        nextReview: nextReview.toISOString().split("T")[0],
+        reviewType: "2-day",
+        // Lưu thêm các thông tin khác nếu có
+        options: q.options,
+        answer: q.answer,
+        difficulty: q.difficulty,
+        modelAnswer: q.modelAnswer,
+        keywords: q.keywords,
+      };
+    });
+
+    // Thêm câu hỏi mới vào state
+    setQuestions((prevQuestions) => [...prevQuestions, ...formattedQuestions]);
+  };
 
   const filteredQuestions = questions.filter((q) => {
     const matchesSearch = q.question
@@ -90,9 +75,19 @@ export default function QuestionsPage() {
       .includes(searchQuery.toLowerCase());
     const matchesCategory =
       categoryFilter === "all" ||
-      q.category.toLowerCase() === categoryFilter.toLowerCase();
+      (q.category && q.category.toLowerCase() === categoryFilter.toLowerCase());
     return matchesSearch && matchesCategory;
   });
+
+  // Lọc câu hỏi theo loại tab
+  const getTabQuestions = (tabValue) => {
+    if (tabValue === "all") return filteredQuestions;
+    if (tabValue === "due") {
+      const today = new Date().toISOString().split("T")[0];
+      return filteredQuestions.filter((q) => q.nextReview <= today);
+    }
+    return filteredQuestions.filter((q) => q.type === tabValue);
+  };
 
   return (
     <div className="container px-4 py-6 mx-auto max-w-7xl">
@@ -107,7 +102,7 @@ export default function QuestionsPage() {
             </Button>
             <h1 className="text-2xl font-bold tracking-tight">Questions</h1>
           </div>
-          <QuickAddQuestion>
+          <QuickAddQuestion onQuestionsSave={handleQuestionsSave}>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               Add Question
@@ -138,10 +133,11 @@ export default function QuestionsPage() {
                   <SelectItem value="biology">Biology</SelectItem>
                   <SelectItem value="mathematics">Mathematics</SelectItem>
                   <SelectItem value="history">History</SelectItem>
-                  <SelectItem value="computer science">
+                  <SelectItem value="computer-science">
                     Computer Science
                   </SelectItem>
                   <SelectItem value="economics">Economics</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -167,14 +163,14 @@ export default function QuestionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQuestions.length === 0 ? (
+                {getTabQuestions("all").length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       No questions found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredQuestions.map((question) => (
+                  getTabQuestions("all").map((question) => (
                     <TableRow key={question.id}>
                       <TableCell className="font-medium">
                         {question.question}
@@ -207,14 +203,161 @@ export default function QuestionsPage() {
               </TableBody>
             </Table>
           </TabsContent>
-          <TabsContent value="due">
-            {/* Similar table structure for due questions */}
+          <TabsContent value="due" className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Question</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[120px]">Category</TableHead>
+                  <TableHead className="w-[150px]">Next Review</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getTabQuestions("due").length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No questions due for review.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  getTabQuestions("due").map((question) => (
+                    <TableRow key={question.id}>
+                      <TableCell className="font-medium">
+                        {question.question}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="capitalize">{question.type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{question.category}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs rounded-full bg-secondary/10 text-secondary">
+                            {question.reviewType}
+                          </span>
+                          <span>
+                            {new Date(question.nextReview).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </TabsContent>
-          <TabsContent value="multiple-choice">
-            {/* Similar table structure for multiple choice questions */}
+          <TabsContent value="multiple-choice" className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Question</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[120px]">Category</TableHead>
+                  <TableHead className="w-[150px]">Next Review</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getTabQuestions("multiple-choice").length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No multiple-choice questions found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  getTabQuestions("multiple-choice").map((question) => (
+                    <TableRow key={question.id}>
+                      <TableCell className="font-medium">
+                        {question.question}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="capitalize">{question.type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{question.category}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs rounded-full bg-secondary/10 text-secondary">
+                            {question.reviewType}
+                          </span>
+                          <span>
+                            {new Date(question.nextReview).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </TabsContent>
-          <TabsContent value="essay">
-            {/* Similar table structure for essay questions */}
+          <TabsContent value="essay" className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Question</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[120px]">Category</TableHead>
+                  <TableHead className="w-[150px]">Next Review</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getTabQuestions("essay").length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No essay questions found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  getTabQuestions("essay").map((question) => (
+                    <TableRow key={question.id}>
+                      <TableCell className="font-medium">
+                        {question.question}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="capitalize">{question.type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{question.category}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs rounded-full bg-secondary/10 text-secondary">
+                            {question.reviewType}
+                          </span>
+                          <span>
+                            {new Date(question.nextReview).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </TabsContent>
         </Tabs>
       </div>
