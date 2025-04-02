@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useLoginMutation } from "@/redux/api/userApiSlice";
+import { useLoginMutation } from "@/redux/api/authApi";
 import { setCredentials } from "@/redux/feature/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

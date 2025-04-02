@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import {
   BarChart2,
@@ -21,6 +21,8 @@ import { cn } from "../lib/utils";
 import { useOnClickOutside } from "../hooks/use-click-outside";
 import LoginModal from "@/components/login-modal";
 import SignUpModal from "@/components/signup-modal";
+import { useLogoutMutation } from "@/redux/api/authApi";
+import { logout } from "@/redux/feature/authSlice";
 
 const routes = [
   {
@@ -65,6 +67,9 @@ const HeaderWithDropdown = () => {
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
   const location = useLocation();
+
+  const [logoutApiCall] = useLogoutMutation();
+  const dispatch = useDispatch();
 
   // Modal states
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -185,12 +190,15 @@ const HeaderWithDropdown = () => {
   }, [isMenuOpen]);
 
   // Handle logout
-  const handleLogout = useCallback(() => {
-    // Xử lý logout (giữ lại phần này cho UI demo, thực tế sẽ dispatch logout action)
-
-    // Close dropdown
-    setIsUserDropdownOpen(false);
-  }, []);
+  const handleLogout = async () => {
+    try {
+      await logoutApiCall().unwrap();
+      dispatch(logout());
+      setIsUserDropdownOpen(false);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   // Lấy tên hiển thị của user
   const getUserDisplayName = () => {

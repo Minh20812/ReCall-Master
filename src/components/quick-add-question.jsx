@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
+  DrawerDescription,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,22 +33,60 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Camera, Mic, Upload } from "lucide-react";
+import { useCreateQuestionMutation } from "@/redux/api/questionApi";
+import { useGetTopicsQuery } from "@/redux/api/topicApi"; // Assuming you have this
 
 export function QuickAddQuestion({ onQuestionsSave }) {
-  const [questionType, setQuestionType] = useState("multiple-choice");
+  const [questionType, setQuestionType] = useState("multiple_choice");
   const [step, setStep] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState({
-    question: "",
-    type: "multiple-choice",
-    category: "",
-    difficulty: "medium",
-    options: ["", "", "", ""],
+    content: "",
+    type: "multiple_choice",
+    topic: "",
+    difficulty: 3,
+    priority: 3,
+    answers: [],
+    tags: [],
+    media: [],
   });
   const [excelQuestions, setExcelQuestions] = useState([]);
 
   const isMobile = useIsMobile();
+  const [createQuestion] = useCreateQuestionMutation();
+  const { data: topics, isLoading: topicsLoading } = useGetTopicsQuery();
 
+  // Handle option changes for multiple choice
+  const handleOptionChange = (index, value) => {
+    const newAnswers = [...currentQuestion.answers];
+    if (!newAnswers[index]) {
+      newAnswers[index] = { content: "", isCorrect: false, explanation: "" };
+    }
+    newAnswers[index].content = value;
+    setCurrentQuestion((prev) => ({ ...prev, answers: newAnswers }));
+  };
+
+  // Toggle correct answer
+  const toggleCorrectAnswer = (index) => {
+    const newAnswers = [...currentQuestion.answers];
+    if (!newAnswers[index]) {
+      newAnswers[index] = { content: "", isCorrect: false, explanation: "" };
+    }
+
+    // For true/false type, make this the only correct answer
+    if (questionType === "true_false") {
+      newAnswers.forEach((answer, i) => {
+        answer.isCorrect = i === index;
+      });
+    } else {
+      // For multiple choice, toggle this answer
+      newAnswers[index].isCorrect = !newAnswers[index].isCorrect;
+    }
+
+    setCurrentQuestion((prev) => ({ ...prev, answers: newAnswers }));
+  };
+
+  // Handle file upload for Excel import
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -61,17 +100,51 @@ export function QuickAddQuestion({ onQuestionsSave }) {
       const jsonData = XLSX.utils.sheet_to_json(sheet);
 
       const formattedQuestions = jsonData.map((row) => {
-        const options = [row["A"], row["B"], row["C"], row["D"]].filter(
-          Boolean
-        );
-        const answerIndex = ["A", "B", "C", "D"].indexOf(row["Answer"]);
+        // Create answers array in correct format
+        const answers = [];
+
+        if (row["A"])
+          answers.push({
+            content: row["A"],
+            isCorrect: row["Answer"] === "A",
+            explanation: "",
+          });
+        if (row["B"])
+          answers.push({
+            content: row["B"],
+            isCorrect: row["Answer"] === "B",
+            explanation: "",
+          });
+        if (row["C"])
+          answers.push({
+            content: row["C"],
+            isCorrect: row["Answer"] === "C",
+            explanation: "",
+          });
+        if (row["D"])
+          answers.push({
+            content: row["D"],
+            isCorrect: row["Answer"] === "D",
+            explanation: "",
+          });
+
         return {
-          question: row["Question"] || "",
-          type: "multiple-choice",
-          options,
-          answer: answerIndex !== -1 ? options[answerIndex] : "",
-          category: row["Category"] || "other",
-          difficulty: row["Difficulty"] || "medium",
+          content: row["Question"] || "",
+          type: "multiple_choice",
+          answers,
+          difficulty: row["Difficulty"]
+            ? parseInt(row["Difficulty"]) || 3
+            : row["Difficulty"] === "easy"
+            ? 1
+            : row["Difficulty"] === "medium"
+            ? 3
+            : row["Difficulty"] === "hard"
+            ? 5
+            : 3,
+          topic: row["Topic"] || "",
+          priority: 3,
+          tags: [],
+          media: [],
         };
       });
 
@@ -81,49 +154,132 @@ export function QuickAddQuestion({ onQuestionsSave }) {
     reader.readAsArrayBuffer(file);
   };
 
+  // Save question to backend
   const handleSaveQuestions = () => {
-    const finalQuestions =
-      excelQuestions.length > 0 ? excelQuestions : [currentQuestion];
+    // Prepare question data
+    const questionData = {
+      ...currentQuestion,
+      // Convert string difficulty to number if needed
+      difficulty:
+        typeof currentQuestion.difficulty === "string"
+          ? parseInt(currentQuestion.difficulty)
+          : currentQuestion.difficulty,
+    };
 
-    if (onQuestionsSave) {
-      onQuestionsSave(finalQuestions);
-    }
+    // Create question
+    createQuestion(questionData)
+      .unwrap()
+      .then((res) => {
+        console.log("Question created:", res);
+        onQuestionsSave(res);
 
-    // Reset states
-    setCurrentQuestion({
-      question: "",
-      type: "multiple-choice",
-      category: "",
-      difficulty: "medium",
-      options: ["", "", "", ""],
-    });
-    setExcelQuestions([]);
-    setIsDialogOpen(false);
+        // Reset form
+        setCurrentQuestion({
+          content: "",
+          type: "multiple_choice",
+          topic: "",
+          difficulty: 3,
+          priority: 3,
+          answers: [],
+          tags: [],
+          media: [],
+        });
+        setStep(0);
+        setIsDialogOpen(false);
+      })
+      .catch((error) => {
+        console.error("Error creating question:", error);
+      });
   };
+
+  // Save imported questions from Excel
+  const handleSaveImportedQuestions = () => {
+    // Save all questions from Excel one by one
+    const promises = excelQuestions.map((question) =>
+      createQuestion(question).unwrap()
+    );
+
+    Promise.all(promises)
+      .then((responses) => {
+        console.log("All questions created:", responses);
+        onQuestionsSave(responses);
+        setExcelQuestions([]);
+        setIsDialogOpen(false);
+      })
+      .catch((error) => {
+        console.error("Error creating questions:", error);
+      });
+  };
+
+  // Initialize answers based on question type
+  useEffect(() => {
+    if (questionType === "multiple_choice") {
+      // Initialize with 4 empty answer options
+      setCurrentQuestion((prev) => ({
+        ...prev,
+        type: "multiple_choice",
+        answers: prev.answers.length
+          ? prev.answers
+          : [
+              { content: "", isCorrect: false, explanation: "" },
+              { content: "", isCorrect: false, explanation: "" },
+              { content: "", isCorrect: false, explanation: "" },
+              { content: "", isCorrect: false, explanation: "" },
+            ],
+      }));
+    } else if (questionType === "true_false") {
+      // Initialize with True/False options
+      setCurrentQuestion((prev) => ({
+        ...prev,
+        type: "true_false",
+        answers: [
+          { content: "True", isCorrect: false, explanation: "" },
+          { content: "False", isCorrect: false, explanation: "" },
+        ],
+      }));
+    } else if (questionType === "essay") {
+      // Essay questions don't have predefined answers
+      setCurrentQuestion((prev) => ({
+        ...prev,
+        type: "essay",
+        answers: [],
+      }));
+    }
+  }, [questionType]);
 
   const renderQuestionTypeStep = () => (
     <div className="grid grid-cols-2 gap-4 py-4">
       <Button
-        variant={questionType === "multiple-choice" ? "default" : "outline"}
+        variant={questionType === "multiple_choice" ? "default" : "outline"}
         className="h-24 flex flex-col gap-2"
-        onClick={() => {
-          setQuestionType("multiple-choice");
-          setCurrentQuestion((prev) => ({ ...prev, type: "multiple-choice" }));
-        }}
+        onClick={() => setQuestionType("multiple_choice")}
       >
         <span className="text-2xl">🔘</span>
         <span>Multiple Choice</span>
       </Button>
       <Button
+        variant={questionType === "true_false" ? "default" : "outline"}
+        className="h-24 flex flex-col gap-2"
+        onClick={() => setQuestionType("true_false")}
+      >
+        <span className="text-2xl">✓/✗</span>
+        <span>True/False</span>
+      </Button>
+      <Button
         variant={questionType === "essay" ? "default" : "outline"}
         className="h-24 flex flex-col gap-2"
-        onClick={() => {
-          setQuestionType("essay");
-          setCurrentQuestion((prev) => ({ ...prev, type: "essay" }));
-        }}
+        onClick={() => setQuestionType("essay")}
       >
         <span className="text-2xl">📝</span>
         <span>Essay</span>
+      </Button>
+      <Button
+        variant={questionType === "matching" ? "default" : "outline"}
+        className="h-24 flex flex-col gap-2"
+        onClick={() => setQuestionType("matching")}
+      >
+        <span className="text-2xl">🔄</span>
+        <span>Matching</span>
       </Button>
     </div>
   );
@@ -131,58 +287,92 @@ export function QuickAddQuestion({ onQuestionsSave }) {
   const renderQuestionDetailsStep = () => (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
-        <Label htmlFor="question">Question</Label>
+        <Label htmlFor="question">Question Content</Label>
         <Textarea
           id="question"
           placeholder="Enter your question here..."
-          value={currentQuestion.question}
+          value={currentQuestion.content}
           onChange={(e) =>
             setCurrentQuestion((prev) => ({
               ...prev,
-              question: e.target.value,
+              content: e.target.value,
             }))
           }
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="topic">Topic</Label>
           <Select
-            value={currentQuestion.category}
+            value={currentQuestion.topic}
             onValueChange={(value) =>
-              setCurrentQuestion((prev) => ({ ...prev, category: value }))
+              setCurrentQuestion((prev) => ({ ...prev, topic: value }))
             }
           >
-            <SelectTrigger id="category">
-              <SelectValue placeholder="Select category" />
+            <SelectTrigger id="topic">
+              <SelectValue placeholder="Select topic" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="biology">Biology</SelectItem>
-              <SelectItem value="mathematics">Mathematics</SelectItem>
-              <SelectItem value="history">History</SelectItem>
-              <SelectItem value="computer-science">Computer Science</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+              {topicsLoading ? (
+                <SelectItem value="" disabled>
+                  Loading topics...
+                </SelectItem>
+              ) : (
+                topics?.map((topic) => (
+                  <SelectItem key={topic._id} value={topic._id}>
+                    {topic.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="difficulty">Difficulty</Label>
+          <Label htmlFor="difficulty">Difficulty (1-5)</Label>
           <Select
-            value={currentQuestion.difficulty}
+            value={currentQuestion.difficulty.toString()}
             onValueChange={(value) =>
-              setCurrentQuestion((prev) => ({ ...prev, difficulty: value }))
+              setCurrentQuestion((prev) => ({
+                ...prev,
+                difficulty: parseInt(value),
+              }))
             }
           >
             <SelectTrigger id="difficulty">
               <SelectValue placeholder="Select difficulty" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
+              <SelectItem value="1">1 (Very Easy)</SelectItem>
+              <SelectItem value="2">2 (Easy)</SelectItem>
+              <SelectItem value="3">3 (Medium)</SelectItem>
+              <SelectItem value="4">4 (Hard)</SelectItem>
+              <SelectItem value="5">5 (Very Hard)</SelectItem>
             </SelectContent>
           </Select>
         </div>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="priority">Priority (1-5)</Label>
+        <Select
+          value={currentQuestion.priority.toString()}
+          onValueChange={(value) =>
+            setCurrentQuestion((prev) => ({
+              ...prev,
+              priority: parseInt(value),
+            }))
+          }
+        >
+          <SelectTrigger id="priority">
+            <SelectValue placeholder="Select priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1 (Low)</SelectItem>
+            <SelectItem value="2">2</SelectItem>
+            <SelectItem value="3">3 (Medium)</SelectItem>
+            <SelectItem value="4">4</SelectItem>
+            <SelectItem value="5">5 (High)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
@@ -192,46 +382,40 @@ export function QuickAddQuestion({ onQuestionsSave }) {
       <div className="space-y-2">
         <Label>Answer Options</Label>
         <div className="space-y-2">
-          {currentQuestion.options.map((option, index) => (
+          {currentQuestion.answers.map((answer, index) => (
             <div key={index} className="flex gap-2">
               <Input
                 placeholder={`Option ${index + 1}`}
-                value={option}
-                onChange={(e) => {
-                  const newOptions = [...currentQuestion.options];
-                  newOptions[index] = e.target.value;
-                  setCurrentQuestion((prev) => ({
-                    ...prev,
-                    options: newOptions,
-                  }));
-                }}
+                value={answer.content}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
               />
               <Button
-                variant={
-                  currentQuestion.answer === option ? "default" : "outline"
-                }
+                variant={answer.isCorrect ? "default" : "outline"}
                 size="icon"
                 className="shrink-0"
-                onClick={() =>
-                  setCurrentQuestion((prev) => ({ ...prev, answer: option }))
-                }
+                onClick={() => toggleCorrectAnswer(index)}
               >
-                {currentQuestion.answer === option ? "✓" : ""}
+                {answer.isCorrect ? "✓" : ""}
               </Button>
             </div>
           ))}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2 w-full"
-          onClick={() => {
-            const newOptions = [...currentQuestion.options, ""];
-            setCurrentQuestion((prev) => ({ ...prev, options: newOptions }));
-          }}
-        >
-          Add Option
-        </Button>
+        {questionType === "multiple_choice" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={() => {
+              const newAnswers = [
+                ...currentQuestion.answers,
+                { content: "", isCorrect: false, explanation: "" },
+              ];
+              setCurrentQuestion((prev) => ({ ...prev, answers: newAnswers }));
+            }}
+          >
+            Add Option
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -254,15 +438,18 @@ export function QuickAddQuestion({ onQuestionsSave }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="keywords">Key Concepts/Keywords</Label>
-        <Input
-          id="keywords"
-          placeholder="Enter keywords separated by commas"
-          value={currentQuestion.keywords?.join(", ") || ""}
-          onChange={(e) => {
-            const keywords = e.target.value.split(",").map((k) => k.trim());
-            setCurrentQuestion((prev) => ({ ...prev, keywords }));
-          }}
+        <Label htmlFor="explanation">Explanation</Label>
+        <Textarea
+          id="explanation"
+          placeholder="Enter explanation for grading..."
+          rows={3}
+          value={currentQuestion.explanation || ""}
+          onChange={(e) =>
+            setCurrentQuestion((prev) => ({
+              ...prev,
+              explanation: e.target.value,
+            }))
+          }
         />
       </div>
     </div>
@@ -303,19 +490,31 @@ export function QuickAddQuestion({ onQuestionsSave }) {
             <ul className="mt-2 space-y-1">
               {excelQuestions.map((q, index) => (
                 <li key={index} className="border p-2 rounded">
-                  <strong>Q{index + 1}:</strong> {q.question}
-                  {q.type === "multiple-choice" && (
+                  <strong>Q{index + 1}:</strong> {q.content}
+                  {q.type === "multiple_choice" && (
                     <>
                       <br />
-                      <strong>Options:</strong> {q.options.join(" | ")}
+                      <strong>Options:</strong>{" "}
+                      {q.answers.map((a) => a.content).join(" | ")}
                       <br />
-                      <strong>Answer:</strong> {q.answer}
+                      <strong>Correct:</strong>{" "}
+                      {q.answers
+                        .filter((a) => a.isCorrect)
+                        .map((a) => a.content)
+                        .join(", ")}
                     </>
                   )}
                 </li>
               ))}
             </ul>
           </div>
+          <Button
+            className="mt-4 w-full"
+            onClick={handleSaveImportedQuestions}
+            disabled={excelQuestions.length === 0}
+          >
+            Save All Questions
+          </Button>
         </div>
       )}
     </div>
@@ -327,9 +526,7 @@ export function QuickAddQuestion({ onQuestionsSave }) {
     {
       title: "Answer Options",
       render:
-        questionType === "multiple-choice"
-          ? renderMultipleChoiceStep
-          : renderEssayStep,
+        questionType === "essay" ? renderEssayStep : renderMultipleChoiceStep,
     },
     { title: "Import from Excel", render: renderExcelImportStep },
   ];
@@ -360,7 +557,7 @@ export function QuickAddQuestion({ onQuestionsSave }) {
               {step < steps.length - 1 ? (
                 <Button onClick={() => setStep(step + 1)}>Next</Button>
               ) : (
-                <Button onClick={handleSaveQuestions}>Save Questions</Button>
+                <Button onClick={handleSaveQuestions}>Save Question</Button>
               )}
             </div>
             <DrawerClose asChild>
@@ -389,12 +586,17 @@ export function QuickAddQuestion({ onQuestionsSave }) {
           onValueChange={(value) => setQuestionType(value)}
           className="pt-2"
         >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="multiple-choice">Multiple Choice</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="multiple_choice">Multiple Choice</TabsTrigger>
+            <TabsTrigger value="true_false">True/False</TabsTrigger>
             <TabsTrigger value="essay">Essay</TabsTrigger>
             <TabsTrigger value="import">Import Excel</TabsTrigger>
           </TabsList>
-          <TabsContent value="multiple-choice" className="space-y-4 pt-4">
+          <TabsContent value="multiple_choice" className="space-y-4 pt-4">
+            {renderQuestionDetailsStep()}
+            {renderMultipleChoiceStep()}
+          </TabsContent>
+          <TabsContent value="true_false" className="space-y-4 pt-4">
             {renderQuestionDetailsStep()}
             {renderMultipleChoiceStep()}
           </TabsContent>
@@ -402,12 +604,23 @@ export function QuickAddQuestion({ onQuestionsSave }) {
             {renderQuestionDetailsStep()}
             {renderEssayStep()}
           </TabsContent>
+          <TabsContent value="matching" className="space-y-4 pt-4">
+            {renderQuestionDetailsStep()}
+            {/* Add matching specific UI here */}
+            <div className="p-4 text-center text-gray-500">
+              Matching question UI coming soon...
+            </div>
+          </TabsContent>
           <TabsContent value="import" className="space-y-4 pt-4">
             {renderExcelImportStep()}
           </TabsContent>
         </Tabs>
         <DialogFooter>
-          <Button type="submit" onClick={handleSaveQuestions}>
+          <Button
+            type="submit"
+            onClick={handleSaveQuestions}
+            disabled={questionType === "import"}
+          >
             Save Question
           </Button>
         </DialogFooter>
