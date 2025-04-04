@@ -10,7 +10,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Button } from "../components/ui/button"; // Đảm bảo đường dẫn chính xác
-import { QuickAddQuestion } from "../components/quick-add-question"; // Đảm bảo đường dẫn chính xác
+import { QuickAddQuestion } from "../components/questions/QuickAddQuestion"; // Đảm bảo đường dẫn chính xác
 import { useIsMobile } from "../hooks/use-mobile"; // Đảm bảo đường dẫn chính xác
 
 export function MobileNav() {

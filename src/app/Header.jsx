@@ -223,11 +223,10 @@ const HeaderWithDropdown = () => {
         <Link
           to="/"
           className="flex items-center gap-2 mr-6 transition-transform hover:scale-105 focus:scale-105"
-          aria-label="RecallMaster Home"
+          aria-label="Home"
         >
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            RecallMaster
-          </span>
+          {/* Replace the text with an image logo */}
+          <img src="/logo.png" alt="Site Logo" className="h-16 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}

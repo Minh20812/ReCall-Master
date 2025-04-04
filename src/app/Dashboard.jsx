@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, Clock, Plus, TrendingUp } from "lucide-react";
 import { DashboardCalendar } from "@/components/dashboard-calendar";
 import { DashboardChart } from "@/components/dashboard-chart";
-import { QuickAddQuestion } from "@/components/quick-add-question";
+import { QuickAddQuestion } from "@/components/questions/QuickAddQuestion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDashboard } from "@/components/mobile-dashboard";
 import { Link } from "react-router-dom";
