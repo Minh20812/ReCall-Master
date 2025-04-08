@@ -52,10 +52,10 @@ const LoginModal = ({
         navigate(redirect);
         setIsLoginModalOpen(false);
       } else {
-        console.error("Login response không chứa dữ liệu:", res);
+        console.error("Login response does not contain data:", res);
       }
     } catch (error) {
-      console.error("Lỗi đăng nhập:", error);
+      console.error("Login error:", error);
     }
   };
 

@@ -36,7 +36,7 @@ export const questionApi = apiSlice.injectEndpoints({
             ]
           : [{ type: "Question", id: "LIST" }],
       keepUnusedDataFor: 60, // Cache for 60 seconds
-    }), 
+    }),
 
     // Create a new question
     createQuestion: builder.mutation({
