@@ -7,6 +7,7 @@ import Settings from "./app/SettingsPage";
 import Header from "./app/Header";
 import { Toaster } from "sonner";
 import WelcomeModal from "./components/WelcomeModal";
+import QuestionEditForm from "./components/questions/QuestionEditForm";
 
 const App = () => {
   return (
@@ -20,6 +21,7 @@ const App = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/questions" element={<Questions />} />
+            <Route path="/questions/edit/:id" element={<QuestionEditForm />} />
             <Route path="/review" element={<Review />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

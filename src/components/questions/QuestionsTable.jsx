@@ -14,12 +14,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileText, Eye, Trash2, Star } from "lucide-react";
+import { FileText, Eye, Trash2, Star, Edit } from "lucide-react";
 import { useGetTopicsQuery } from "@/redux/api/topicApi";
 import { useDeleteQuestionMutation } from "@/redux/api/questionApi";
 import { QuestionsTablePagination } from "./QuestionsTablePagination";
 import { useState } from "react"; // Import useState hook
 import QuestionModalInfo from "./QuestionModalInfo"; // Import modal component
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
 export function QuestionsTable({
   tabValue,
@@ -33,6 +34,7 @@ export function QuestionsTable({
   // State for modal control
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const navigate = useNavigate(); // For navigation to edit page
 
   // Get topics for name lookup
   const { data: topics, isLoading: topicsLoading } = useGetTopicsQuery();
@@ -56,6 +58,12 @@ export function QuestionsTable({
   const handleViewQuestion = (question) => {
     setSelectedQuestion(question);
     setIsModalOpen(true);
+  };
+
+  // Handler for editing question
+  const handleEditQuestion = (question) => {
+    // Navigate to the edit question page with the question ID
+    navigate(`/questions/edit/${question._id}`, { state: { question } });
   };
 
   // Get the questions to display based on the selected tab
@@ -157,6 +165,7 @@ export function QuestionsTable({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         question={selectedQuestion}
+        onEdit={handleEditQuestion}
       />
 
       <Table>
@@ -167,7 +176,7 @@ export function QuestionsTable({
             <TableHead className="w-[120px]">Topic</TableHead>
             <TableHead className="w-[120px]">Difficulty</TableHead>
             <TableHead className="w-[150px]">Next Review</TableHead>
-            <TableHead className="w-[140px]">Actions</TableHead>
+            <TableHead className="w-[180px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -275,6 +284,14 @@ export function QuestionsTable({
                         onClick={() => handleViewQuestion(question)}
                       >
                         <Eye className="w-4 h-4 mr-1" /> View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-green-500 cursor-pointer"
+                        onClick={() => handleEditQuestion(question)}
+                      >
+                        <Edit className="w-4 h-4 mr-1" /> Edit
                       </Button>
                       <Button
                         variant="ghost"

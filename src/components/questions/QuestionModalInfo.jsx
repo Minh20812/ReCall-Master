@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Star } from "lucide-react";
+import { FileText, Star, Edit } from "lucide-react";
 
-const QuestionModalInfo = ({ question, isOpen, onClose }) => {
+const QuestionModalInfo = ({ question, isOpen, onClose, onEdit }) => {
   // Handle case when question is undefined
   if (!question) return null;
 
@@ -61,6 +61,12 @@ const QuestionModalInfo = ({ question, isOpen, onClose }) => {
         explanation: answer.explanation,
         isCorrect: answer.isCorrect,
       })) || [];
+
+  // Handle edit button click
+  const handleEdit = () => {
+    onEdit(question);
+    onClose(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -212,7 +218,14 @@ const QuestionModalInfo = ({ question, isOpen, onClose }) => {
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handleEdit}
+            className="flex items-center gap-1"
+          >
+            <Edit className="h-4 w-4" /> Edit
+          </Button>
           <Button onClick={() => onClose(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
