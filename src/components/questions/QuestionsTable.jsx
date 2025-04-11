@@ -14,10 +14,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileText, Eye, Pencil, Star } from "lucide-react";
+import { FileText, Eye, Trash2, Star } from "lucide-react";
 import { useGetTopicsQuery } from "@/redux/api/topicApi";
 import { useDeleteQuestionMutation } from "@/redux/api/questionApi";
 import { QuestionsTablePagination } from "./QuestionsTablePagination";
+import { useState } from "react"; // Import useState hook
+import QuestionModalInfo from "./QuestionModalInfo"; // Import modal component
 
 export function QuestionsTable({
   tabValue,
@@ -28,6 +30,10 @@ export function QuestionsTable({
   onPageChange,
   refetchQuestions,
 }) {
+  // State for modal control
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+
   // Get topics for name lookup
   const { data: topics, isLoading: topicsLoading } = useGetTopicsQuery();
 
@@ -44,6 +50,12 @@ export function QuestionsTable({
         console.error("Failed to delete question:", err);
       }
     }
+  };
+
+  // Handler for opening question modal
+  const handleViewQuestion = (question) => {
+    setSelectedQuestion(question);
+    setIsModalOpen(true);
   };
 
   // Get the questions to display based on the selected tab
@@ -140,6 +152,13 @@ export function QuestionsTable({
 
   return (
     <>
+      {/* Question Modal */}
+      <QuestionModalInfo
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        question={selectedQuestion}
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -249,11 +268,21 @@ export function QuestionsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-blue-500 cursor-pointer"
+                        onClick={() => handleViewQuestion(question)}
+                      >
                         <Eye className="w-4 h-4 mr-1" /> View
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <Pencil className="w-4 h-4 mr-1" /> Edit
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-red-500 cursor-pointer"
+                        onClick={() => handleDeleteQuestion(question._id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
                     </div>
                   </TableCell>
