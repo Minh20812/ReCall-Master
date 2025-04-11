@@ -5,6 +5,7 @@ import { useGetTopicsQuery } from "@/redux/api/topicApi";
 import MobileQuestionForm from "./MobileQuestionForm";
 import DesktopQuestionForm from "./DesktopQuestionForm";
 import { initialQuestionState } from "../../utils/questionUtils";
+import { toast } from "sonner";
 
 export function QuickAddQuestion({ onQuestionsSave }) {
   const [questionType, setQuestionType] = useState("multiple_choice");
@@ -40,6 +41,7 @@ export function QuickAddQuestion({ onQuestionsSave }) {
       .then((res) => {
         console.log("Question created:", res);
         onQuestionsSave([res]); // Pass as an array with a single element
+        toast.success("Question created successfully!");
 
         // Reset form
         setCurrentQuestion(initialQuestionState);
@@ -47,7 +49,7 @@ export function QuickAddQuestion({ onQuestionsSave }) {
         setIsDialogOpen(false);
       })
       .catch((error) => {
-        console.error("Error creating question:", error);
+        toast.error(error.data?.message || "Failed to create question");
       });
   };
 

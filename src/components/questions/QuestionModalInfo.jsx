@@ -9,10 +9,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Star, Edit } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const QuestionModalInfo = ({ question, isOpen, onClose, onEdit }) => {
   // Handle case when question is undefined
   if (!question) return null;
+
+  // Add this to get current user info
+  const { userInfo } = useSelector((state) => state.auth);
+
+  // Add this helper function to check if user can edit/delete
+  const canModifyQuestion = (question) => {
+    if (!userInfo || !question) return false;
+    return (
+      userInfo.isAdmin || // Admin can modify all questions
+      question.user === userInfo._id || // Check string ID
+      question.user?._id === userInfo._id || // Check object ID
+      question.user?.toString() === userInfo._id?.toString() // Compare as strings
+    );
+  };
 
   // Format difficulty level for display
   const formatDifficulty = (level) => {
@@ -219,13 +234,16 @@ const QuestionModalInfo = ({ question, isOpen, onClose, onEdit }) => {
         </div>
 
         <DialogFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handleEdit}
-            className="flex items-center gap-1"
-          >
-            <Edit className="h-4 w-4" /> Edit
-          </Button>
+          {canModifyQuestion(question) && (
+            <Button
+              variant="outline"
+              onClick={handleEdit}
+              className="flex items-center gap-1"
+            >
+              <Edit className="h-4 w-4" /> Edit
+            </Button>
+          )}
+
           <Button onClick={() => onClose(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>

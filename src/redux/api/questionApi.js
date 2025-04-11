@@ -76,6 +76,10 @@ export const questionApi = apiSlice.injectEndpoints({
         method: "PUT",
         body: data,
       }),
+      transformErrorResponse: (response) => ({
+        status: response.status,
+        message: response.data?.message || "An error occurred",
+      }),
       invalidatesTags: (result, error, data) => [
         { type: "Question", id: data.questionId || data._id },
         { type: "Question", id: "LIST" },

@@ -14,7 +14,7 @@ const App = () => {
     <>
       <WelcomeModal />
       <Router>
-        <Toaster />
+        <Toaster position="top-right" richColors />
         <div className="relative">
           <Header />
           <Routes>

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -48,6 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 const QuestionEditForm = () => {
   const { id } = useParams();
@@ -285,10 +284,14 @@ const QuestionEditForm = () => {
         questionId: id,
       }).unwrap();
 
+      toast.success("Question updated successfully");
       // Navigate back to questions list on successful update
       navigate("/questions");
     } catch (err) {
-      console.error("Failed to update question:", err);
+      toast.error(
+        err.data?.message ||
+          "Failed to update question or Not authorized to update this question"
+      );
     }
   };
 
@@ -333,7 +336,7 @@ const QuestionEditForm = () => {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             {error.data?.message ||
-              "Failed to update question. Please try again."}
+              "Failed to update question or Not authorized to update this question. Please try again."}
           </AlertDescription>
         </Alert>
       )}

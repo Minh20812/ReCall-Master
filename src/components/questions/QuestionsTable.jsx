@@ -18,9 +18,11 @@ import { FileText, Eye, Trash2, Star, Edit } from "lucide-react";
 import { useGetTopicsQuery } from "@/redux/api/topicApi";
 import { useDeleteQuestionMutation } from "@/redux/api/questionApi";
 import { QuestionsTablePagination } from "./QuestionsTablePagination";
-import { useState } from "react"; // Import useState hook
-import QuestionModalInfo from "./QuestionModalInfo"; // Import modal component
-import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
+import { useState } from "react";
+import QuestionModalInfo from "./QuestionModalInfo";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useSelector } from "react-redux";
 
 export function QuestionsTable({
   tabValue,
@@ -39,6 +41,9 @@ export function QuestionsTable({
   // Get topics for name lookup
   const { data: topics, isLoading: topicsLoading } = useGetTopicsQuery();
 
+  // Add this to get current user info
+  const { userInfo } = useSelector((state) => state.auth);
+
   // Delete question mutation
   const [deleteQuestion] = useDeleteQuestionMutation();
 
@@ -47,9 +52,10 @@ export function QuestionsTable({
     if (window.confirm("Are you sure you want to delete this question?")) {
       try {
         await deleteQuestion(id).unwrap();
+        toast.success("Question deleted successfully");
         refetchQuestions();
       } catch (err) {
-        console.error("Failed to delete question:", err);
+        toast.error(err.data?.message || "Failed to delete question");
       }
     }
   };
@@ -84,6 +90,17 @@ export function QuestionsTable({
 
     // Filter by question type
     return questionsData.questions.filter((q) => q.type === tabValue);
+  };
+
+  // Add this helper function to check if user can edit/delete
+  const canModifyQuestion = (question) => {
+    if (!userInfo || !question) return false;
+    return (
+      userInfo.isAdmin || // Admin can modify all questions
+      question.user === userInfo._id || // Check string ID
+      question.user?._id === userInfo._id || // Check object ID
+      question.user?.toString() === userInfo._id?.toString() // Compare as strings
+    );
   };
 
   // Calculate next review date
@@ -285,22 +302,27 @@ export function QuestionsTable({
                       >
                         <Eye className="w-4 h-4 mr-1" /> View
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:text-green-500 cursor-pointer"
-                        onClick={() => handleEditQuestion(question)}
-                      >
-                        <Edit className="w-4 h-4 mr-1" /> Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:text-red-500 cursor-pointer"
-                        onClick={() => handleDeleteQuestion(question._id)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete
-                      </Button>
+
+                      {canModifyQuestion(question) && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:text-green-500 cursor-pointer"
+                            onClick={() => handleEditQuestion(question)}
+                          >
+                            <Edit className="w-4 h-4 mr-1" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:text-red-500 cursor-pointer"
+                            onClick={() => handleDeleteQuestion(question._id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" /> Delete
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
