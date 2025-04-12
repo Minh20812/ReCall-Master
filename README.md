@@ -137,7 +137,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👤 Author
 
-Your Name
+Nguyen Quang Minh
 
 - GitHub: [@nguyenquangminh](https://github.com/Minh20812)
 - Gmail: [ngquangminh2128@gmail.com]
