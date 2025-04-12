@@ -140,7 +140,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Your Name
 
 - GitHub: [@nguyenquangminh](https://github.com/Minh20812)
-- Gmail: [@ngquangminh2128@gmail.com](ngquangminh2128@gmail.com)
+- Gmail: [ngquangminh2128@gmail.com]
+
+```bash
+ngquangminh2128@gmail.com
+```
 
 ## 🙏 Acknowledgments
 
